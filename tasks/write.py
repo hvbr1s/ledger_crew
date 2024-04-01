@@ -11,5 +11,5 @@ write_task = Task(
   #tools=[retriever_tool],
   agent=writer,
   async_execution=False,
-  output_file='response.txt'  # Example of output customization
+  #output_file='response.json'  # Example of output customization
 )
