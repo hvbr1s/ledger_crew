@@ -36,5 +36,5 @@ crew = Crew(
   process=Process.sequential  # Optional: Sequential task execution is default
 )
 
-result = crew.kickoff(inputs={"topic": "where is my Stax?"})
+result = crew.kickoff(inputs={"topic": "<your query>"})
 print(result)
