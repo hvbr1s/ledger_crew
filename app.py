@@ -2,10 +2,11 @@ import os
 from dotenv import main
 from fastapi.security import APIKeyHeader
 from fastapi import FastAPI, HTTPException, Depends
-from crew.agents import researcher, writer
-from tasks.list import research, write
+from crew.agents import researcher, writer, topic_getter
+from tasks.list import research_issue, write, get_human_issue
 from crewai import Crew, Process
 from pydantic import BaseModel
+from langchain_openai import ChatOpenAI
 
 # Initialize environment variables
 main.load_dotenv()
@@ -29,9 +30,9 @@ class Query(BaseModel):
 
 # Forming the tech-focused crew with enhanced configurations
 crew = Crew(
-  agents=[researcher, writer],
-  tasks=[research, write],
-  process=Process.sequential  # Optional: Sequential task execution is default
+  agents=[topic_getter, researcher, writer],
+  tasks=[get_human_issue, research_issue, write],
+  process=Process.sequential
 )
 
 # Initialize app
