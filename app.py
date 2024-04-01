@@ -1,8 +1,7 @@
 import os
-from anthropic import AsyncAnthropic
 from dotenv import main
 from fastapi.security import APIKeyHeader
-from fastapi import FastAPI, HTTPException, status, Depends
+from fastapi import FastAPI, HTTPException, Depends
 from crew.agents import researcher, writer
 from tasks.list import research, write
 from crewai import Crew, Process
@@ -27,13 +26,6 @@ class Query(BaseModel):
     user_id: str | None = None
     user_locale: str | None = None
     platform: str | None = None
-
-# Initialize Anthropic client
-anthropic_client = AsyncAnthropic(
-    
-    api_key=os.environ.get("ANTHROPIC_API_KEY"),
-    timeout=45,
-)
 
 # Forming the tech-focused crew with enhanced configurations
 crew = Crew(
