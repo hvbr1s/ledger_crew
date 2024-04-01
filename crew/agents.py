@@ -1,6 +1,9 @@
 from crewai import Agent
 from tools import retriever_tool
 from langchain_openai import ChatOpenAI
+from langchain.agents import load_tools
+
+human_tools = load_tools(["human"])
 
 focused_llm = ChatOpenAI(
     model="gpt-4-turbo-preview",
@@ -14,8 +17,8 @@ creative_llm = ChatOpenAI(
 
 # Creating a senior researcher agent with memory and verbose mode
 researcher = Agent(
-  role='Senior Security Researcher',
-  goal='Uncover documentation that can help with technical issues related to Ledger products',
+  role='Senior Researcher',
+  goal='Find technical documentation that can help with technical issues related to Ledger products',
   verbose=True,
   memory=True,
   backstory=(
@@ -30,27 +33,27 @@ researcher = Agent(
 # Creating a writer agent
 writer = Agent(
   role='Writer',
-  goal='Use documentation to solve technical issues.',
+  goal='Write an answer to the customer.',
   verbose=True,
   memory=True,
   backstory=(
     "With a flair for simplifying complex topics, you"
-    "are able to use documentation to answer the most complex technical questions about Ledger products."
+    "are able to browse documentation provided by the Senior Researcher to write answers to the most complex technical questions about Ledger products."
   ),
   allow_delegation=False,
   llm=creative_llm
 )
 
-# Creating an investigator agent
-investigator = Agent(
-  role='Investigator',
-  goal='Understand and summarize a technical issue.',
-  verbose=True,
-  memory=True,
-  backstory=(
-    "An investigator at heart, you're passionate about investigating and summarizing issues faced by Ledger users."
-  ),
-  allow_delegation=False,
-  llm=focused_llm
+
+topic_getter = Agent(
+    role='A Senior customer communicator',
+    goal='Consult with the human customer to understand the problem they are facing with their Ledger product. Ask a maximum of 3 questions.',
+    backstory="""As a top customer communicator at Ledger you have honed your skills
+    in consulting with a customer to understand the issue they're facing with their Ledger product.""",
+    verbose=True,
+    allow_delegation=False,
+    llm=focused_llm,
+    memory=True,
+    tools= human_tools,
 )
 

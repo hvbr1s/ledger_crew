@@ -1,9 +1,9 @@
 from crewai import Task
 from tools import retriever_tool
-from crew.agents import researcher, writer
+from crew.agents import researcher, writer, topic_getter
 
 # Research task
-research= Task(
+research_issue= Task(
   description=(
     """Look into your Knowledge base to find the best answer to {topic}. 
     Keep looking until you find a chunk that really answers the question in {topic}. 
@@ -26,13 +26,11 @@ write= Task(
   #output_file='response.json'  # Example of output customization
 )
 
-# # Writing task with language model configuration
-# investigate = Task(
-#   description=(
-#     "Ask follow-up questions until you have enough information about {topic}, then summarize your interaction into a single sentence. Always ask at least 1 follow-up questions before summarizing"
-#   ),
-#   expected_output='A follow-up question OR a summary of the issue faced by the user. The summary should be a maximum of ONE sentence but rich in details.',
-#   agent=writer,
-#   async_execution=False,
-#   #output_file='response.json'  # Example of output customization
-# )
+get_human_issue = Task(
+  description=f"""ASK THE HUMAN for the issue they're facing.
+
+  Compile you results into a clear issue that can be used for doing research going forward""",
+  expected_output="""Clearly state the issue that the human wants you to research.\n\n
+   eg. HUMAN_TOPIC_FOR_RESEARCH = 'AI_TOPIC' """,
+  agent=topic_getter
+)
