@@ -2,9 +2,15 @@ from crewai import Agent
 from tools import retriever_tool
 from langchain_openai import ChatOpenAI
 
-OPENAIGPT4TURBO = ChatOpenAI(
+focused_llm = ChatOpenAI(
+    model="gpt-4-turbo-preview",
+    temperature=0.0
+)
+
+creative_llm = ChatOpenAI(
     model="gpt-4-turbo-preview"
 )
+
 
 # Creating a senior researcher agent with memory and verbose mode
 researcher = Agent(
@@ -18,10 +24,10 @@ researcher = Agent(
   ),
   tools=[retriever_tool],
   allow_delegation=False,
-  llm=OPENAIGPT4TURBO
+  llm=focused_llm
 )
 
-# Creating a writer agent with custom tools and delegation capability
+# Creating a writer agent
 writer = Agent(
   role='Writer',
   goal='Use documentation to solve technical issues.',
@@ -31,8 +37,20 @@ writer = Agent(
     "With a flair for simplifying complex topics, you"
     "are able to use documentation to answer the most complex technical questions about Ledger products."
   ),
-  # tools=[retriever_tool],
   allow_delegation=False,
-  llm=OPENAIGPT4TURBO
+  llm=creative_llm
+)
+
+# Creating an investigator agent
+investigator = Agent(
+  role='Investigator',
+  goal='Understand and summarize a technical issue.',
+  verbose=True,
+  memory=True,
+  backstory=(
+    "An investigator at heart, you're passionate about investigating and summarizing issues faced by Ledger users."
+  ),
+  allow_delegation=False,
+  llm=focused_llm
 )
 
