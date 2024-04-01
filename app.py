@@ -11,11 +11,6 @@ from langchain_openai import ChatOpenAI
 # Initialize environment variables
 main.load_dotenv()
 
-# Initialize the OpenAI GPT-4 language model
-gpt_turbo = ChatOpenAI(
-    model="gpt-4-turbo-preview"
-)
-
 # Initialize backend API keys
 server_api_key=os.environ['BACKEND_API_KEY'] 
 API_KEY_NAME=os.environ['API_KEY_NAME'] 
@@ -37,10 +32,7 @@ class Query(BaseModel):
 crew = Crew(
   agents=[topic_getter, researcher, writer],
   tasks=[get_human_issue, research_issue, write],
-  #process=Process.sequential,
-  process=Process.hierarchical,
-  manager_llm=gpt_turbo,
-  
+  process=Process.sequential
 )
 
 # Initialize app

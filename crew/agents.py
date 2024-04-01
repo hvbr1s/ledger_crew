@@ -47,9 +47,11 @@ writer = Agent(
 
 topic_getter = Agent(
     role='A Senior customer communicator',
-    goal='Consult with the human customer to understand the problem they are facing with their Ledger product. Ask a maximum of 3 questions.',
+    goal='Consult with the human customer to understand the problem they are facing with their issue Ask a maximum of 3 questions.',
     backstory="""As a top customer communicator at Ledger you have honed your skills
-    in consulting with a customer to understand the issue they're facing with their Ledger product.""",
+    in consulting with a customer to understand the issue they're facing with their Ledger product. Use your knowledge of blockchain, cryptocurrency, Ledger Nano X, Nano S, Nano S plus and the Ledger Live app
+    to help you understand the issue at hand.
+    """,
     verbose=True,
     allow_delegation=False,
     llm=focused_llm,
