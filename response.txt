@@ -1,1 +1,9 @@
-The latest firmware version for your Ledger Nano S Plus is version 1.1.1. This update was officially released on 8th January 2024. Make sure to keep your device updated to this version for optimal performance and security.
+There are two potential reasons why you might not be seeing your USD in your Tron account.
+
+The first possibility is that your Tron account is new, and therefore needs to be activated. In order to do this, you need a minimum of 0.1 TRX in your account. If you've sent USDT Tether to your Tron account and it's not showing up, this could be why. To activate your account, make sure to transfer at least 0.1 TRX into it. If you've already sent USDT Tether to an inactive account, don't panic! Your money is safe, and will become visible once the account is activated.
+
+The second possibility is that you're dealing with staked USDT tokens (stUSDT). Ledger Live, which you're using to view your Tron account, doesn't currently support these tokens. This means they won't be detected by the app and won't show up in your account. To view and manage stUSDT tokens, you'll need to connect your Ledger device to a Ledger-compatible third-party wallet such as TronScan.
+
+For more information, you can refer to the official Ledger support page at: https://support.ledger.com/hc/en-us/articles/5288092603677-I-can-t-see-my-USDT-deposit-in-my-Ledger-Tron-account.
+
+I hope this helps! If you have any other questions, don't hesitate to ask.

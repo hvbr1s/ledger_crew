@@ -36,5 +36,5 @@ crew = Crew(
   process=Process.sequential  # Optional: Sequential task execution is default
 )
 
-result = crew.kickoff(inputs={"topic": "What is the Ledger Nano S Plus latest firmware version?"})
+result = crew.kickoff(inputs={"topic": "I can't see my USD in my Tron account, help me!"})
 print(result)

@@ -155,7 +155,6 @@ def retriever_tool(user_input:str) -> str:
     else:
         augmented_contexts = "Today is: " + timestamp + "\n\n" + "\n\n".join(contexts)
 
-    print(f"Returned from Knowledge Base: {augmented_contexts}")
     return augmented_contexts
 
 # Test suite
