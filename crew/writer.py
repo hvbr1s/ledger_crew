@@ -9,7 +9,7 @@ writer = Agent(
   memory=True,
   backstory=(
     "With a flair for simplifying complex topics, you"
-    "are able to use documentation to answer the most complex technical questions."
+    "are able to use documentation to answer the most complex technical questions about Ledger products"
   ),
   # tools=[retriever_tool],
   allow_delegation=False,
