@@ -3,10 +3,8 @@ from anthropic import AsyncAnthropic
 from dotenv import main
 from fastapi.security import APIKeyHeader
 from fastapi import FastAPI, HTTPException, status, Depends
-from crew.researcher import researcher
-from crew.writer import writer
-from tasks.research import research_task
-from tasks.write import write_task
+from crew.agents import researcher, writer
+from tasks.list import research, write
 from crewai import Crew, Process
 from pydantic import BaseModel
 
@@ -40,7 +38,7 @@ anthropic_client = AsyncAnthropic(
 # Forming the tech-focused crew with enhanced configurations
 crew = Crew(
   agents=[researcher, writer],
-  tasks=[research_task, write_task],
+  tasks=[research, write],
   process=Process.sequential  # Optional: Sequential task execution is default
 )
 
@@ -54,7 +52,7 @@ async def agent(user_input):
     
 
 # RAG route
-@app.post('/gpt') 
+@app.post('/agent') 
 async def react_description(query: Query, api_key: str = Depends(get_api_key)): 
     user_input = query.user_input.strip()
     print(f"Query received: {user_input}")
