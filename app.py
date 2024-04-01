@@ -50,15 +50,22 @@ async def agent(user_input):
     response = crew.kickoff(inputs={"topic": user_input})
     return response
     
-
 # RAG route
 @app.post('/agent') 
 async def react_description(query: Query, api_key: str = Depends(get_api_key)): 
     user_input = query.user_input.strip()
     print(f"Query received: {user_input}")
     # Process query
-    res = await agent(user_input)
-    print(f"Query processed: {res}")
+    try:
+      
+      res = await agent(user_input)
+      print(f"Query processed succesfully!")
+
+    except Exception as e:
+        
+        print(f"Something went wrong: {e}")
+        res = "Oops, something went wrong, please try again!"
+    
     return {'output': res}
 
 # Local start command: uvicorn app:app --reload --port 8800
