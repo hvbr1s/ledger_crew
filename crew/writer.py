@@ -11,6 +11,6 @@ writer = Agent(
     "With a flair for simplifying complex topics, you"
     "are able to use documentation to answer the most complex technical questions."
   ),
-  tools=[retriever_tool],
+  # tools=[retriever_tool],
   allow_delegation=False,
 )
