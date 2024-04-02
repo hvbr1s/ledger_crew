@@ -251,6 +251,6 @@ async def react_description(query: Query, api_key: str = Depends(get_api_key)):
             return {'output': cleaned_response}
     
     except Exception as e:
-        print(e)
-        raise HTTPException(status_code=400, detail="Snap! Something went wrong, please try again!")
+            print(f"Something went wrong: {e}")
+            return{'output':"Sorry, something went wrong, please try again!"}
     
