@@ -2,17 +2,15 @@ import os
 from dotenv import main
 from fastapi.security import APIKeyHeader
 from fastapi import FastAPI, HTTPException, Depends
-from crew.agents import researcher, writer, topic_getter
-from tasks.list import research_issue, write, get_human_issue
+from crew.agents import researcher, writer
+from tasks.list import research_issue, write
 from crewai import Crew, Process
 from pydantic import BaseModel
-from langchain_openai import ChatOpenAI
 from openai import AsyncOpenAI
 from dotenv import main
 import json
 import asyncio
 import time
-from datetime import datetime
 
 # Initialize environment variables
 main.load_dotenv()
@@ -230,27 +228,26 @@ async def react_description(query: Query, api_key: str = Depends(get_api_key)):
     chat_history = f"CHAT HISTORY: \n\n{formatted_history.strip()}"
 
     try:
-            # Set clock
-            timestamp = datetime.now().strftime("%B %d, %Y")
 
-            # Start RAG
-            response = await ragchat(user_id, chat_history)     
+        # Start RAG
+        response = await ragchat(user_id, chat_history)     
 
-            #Clean response
-            cleaned_response = response.replace("**", "").replace("Manager", "'My Ledger'")
+        #Clean response
+        cleaned_response = response.replace("**", "").replace("Manager", "'My Ledger'")
 
-            # Print for debugging
-            print(
+        # Print for debugging
+        print(
+            
+            chat_history + "\n",
+            response + "\n\n"
                 
-                chat_history + "\n",
-                response + "\n\n"
-                  
-            )          
-                            
-            # Return response to user
-            return {'output': cleaned_response}
+        )          
+                        
+        # Return response to user
+        return {'output': cleaned_response}
     
     except Exception as e:
-            print(f"Something went wrong: {e}")
-            return{'output':"Sorry, something went wrong, please try again!"}
+
+        print(f"Something went wrong: {e}")
+        return{"output": "Sorry, something went wrong, please try again!"}
     
