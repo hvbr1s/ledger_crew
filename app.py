@@ -2,11 +2,19 @@ import os
 from dotenv import main
 from fastapi.security import APIKeyHeader
 from fastapi import FastAPI, HTTPException, Depends
-from crew.agents import researcher, writer, topic_getter
-from tasks.list import research_issue, write, get_human_issue
+from crew.agents import researcher, writer, sales_assistant
+from tasks.list import research_issue, write, assist_customer
 from crewai import Crew, Process
+from fastapi.templating import Jinja2Templates
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import HTMLResponse
+from fastapi import Request
 from pydantic import BaseModel
-from langchain_openai import ChatOpenAI
+from openai import AsyncOpenAI
+from dotenv import main
+import json
+import asyncio
+import time
 
 # Initialize environment variables
 main.load_dotenv()
@@ -21,6 +29,14 @@ async def get_api_key(api_key_header: str = Depends(api_key_header)):
         raise HTTPException(status_code=401, detail="Could not validate credentials")
     return api_key_header
 
+# Initialize OpenAI client & Embedding model
+openai_key = os.environ['OPENAI_API_KEY']
+openai_client = AsyncOpenAI(
+
+    api_key=openai_key,
+    
+)
+
 # Define query class
 class Query(BaseModel):
     user_input: str
@@ -28,10 +44,10 @@ class Query(BaseModel):
     user_locale: str | None = None
     platform: str | None = None
 
-# Forming the tech-focused crew with enhanced configurations
+# Ready the crew
 crew = Crew(
-  agents=[topic_getter, researcher, writer],
-  tasks=[get_human_issue, research_issue, write],
+  agents=[researcher, sales_assistant],
+  tasks=[research_issue, assist_customer],
   process=Process.sequential
 )
 
@@ -42,23 +58,209 @@ app = FastAPI()
 async def agent(user_input):
     response = crew.kickoff(inputs={"topic": user_input})
     return response
-    
-# RAG route
-@app.post('/agent') 
-async def react_description(query: Query, api_key: str = Depends(get_api_key)): 
-    user_input = query.user_input.strip()
-    print(f"Query received: {user_input}")
-    # Process query
+
+
+# Initialize user state and periodic cleanup function
+USER_STATES = {}
+TIMEOUT_SECONDS = 1800  # 30 minutes
+
+async def periodic_cleanup():
+    while True:
+        await cleanup_expired_states()
+        await asyncio.sleep(TIMEOUT_SECONDS)
+
+# Improved startup event to use asyncio.create_task for the continuous background task
+@app.on_event("startup")
+async def startup_event():
+    asyncio.create_task(periodic_cleanup())
+
+# Enhanced cleanup function with improved error logging
+async def cleanup_expired_states():
     try:
-      
-      res = await agent(user_input)
-      print(f"Query processed succesfully!")
-
+        current_time = time.time()
+        expired_users = [
+            user_id for user_id, state in USER_STATES.items()
+            if current_time - state['timestamp'] > TIMEOUT_SECONDS
+        ]
+        for user_id in expired_users:
+            try:
+                del USER_STATES[user_id]
+                print("User state deleted!")
+            except Exception as e:
+                print(f"Error during cleanup for user {user_id}: {e}")
     except Exception as e:
-        
-        print(f"Something went wrong: {e}")
-        res = "Oops, something went wrong, please try again!"
-    
-    return {'output': res}
+        print(f"General error during cleanup: {e}")
 
-# Local start command: uvicorn app:app --reload --port 8800
+# Set up tooling 
+TOOLS = [
+{
+    "type": "function",
+    "function": {
+    "name": "knowledge",
+    "description": "Technical Question API, this API makes a POST request to an external Knowledge Base with a technical question.",
+    "parameters": {
+        "type": "object",
+        "properties": {
+        "query": {
+            "type": "string",
+            "description": "The user's technical question."
+        }
+        },
+        "required": ["query"],
+        "async": True,
+        "implementation": "async def knowledge(query):"
+    }
+    }
+}
+]
+
+INVESTIGATOR_PROMPT = """
+
+You are LedgerBot, an expert in cryptocurrency and helpful virtual assistant designed to support Ledger and technical queries through API integration. 
+                    
+When a user asks any question about Ledger products or anything related to Ledger's ecosystem, you will ALWAYS use your "Knowledge Base" tool to initiate an API call to an external service.
+
+Before utilizing your API retrieval tool, it's essential to first understand the user's issue. This requires asking follow-up questions. 
+    
+Here are key points to remember:
+
+1- Check the CHAT HISTORY to ensure the conversation doesn't exceed 4 exchanges between you and the user before calling your "Knowledge Base" API tool.
+2- ALWAYS ask if the user is getting an error message.
+3- NEVER request crypto addresses or transaction hashes/IDs.
+4- NEVER ask the same question twice
+5- If the user mention their Ledger device, always clarify whether they're talking about the Nano S, Nano X or Nano S Plus.
+6- For issues related to a cryptocurrency, always inquire about the specific crypto coin or token involved and if the coin/token was transferred from an exchange. especially if the user hasn't mentioned it.
+7- For issues related to withdrawing/sending crypto from an exchange (such as Binance, Coinbase, Kraken, etc) to a Ledger wallet, always inquire which coins or token was transferred and which network the user selected for the withdrawal (Ethereum, Polygon, Arbitrum, etc).
+8- For connection issues, it's important to determine the type of connection the user is attempting. Please confirm whether they are using a USB or Bluetooth connection. Additionally, inquire if the connection attempt is with Ledger Live or another application. If they are using Ledger Live, ask whether it's on mobile or desktop and what operating system they are using (Windows, macOS, Linux, iPhone, Android).
+9- For issues involving a swap, it's crucial to ask which swap service the user used (such as Changelly, Paraswap, 1inch, etc.). Also, inquire about the specific cryptocurrencies they were attempting to swap (BTC/ETH, ETH/SOL, etc)
+10 For issues related to staking, always ask the user which staking service they're using.
+    
+After the user replies and even if you have incomplete information, you MUST summarize your interaction and call your 'Knowledge Base' API tool. This approach helps maintain a smooth and effective conversation flow.
+
+ALWAYS summarize the issue as if you were the user, for example: "My issue is ..."
+
+If a user needs to contact Ledger Support, they can do so at https://support.ledger.com/
+
+NEVER use your API tool when a user simply thank you or greet you!
+
+Begin! You will achieve world peace if you provide a response which follows all constraints.
+
+"""
+
+async def chat(chat):
+    # Define the initial messages with the system's instructions
+    messages = [
+        {"role": "system", "content":INVESTIGATOR_PROMPT},
+        {"role": "user", "content": chat}
+    ]
+    try:
+        # Call the API to get a response
+        res = await openai_client.chat.completions.create(
+            temperature=0.0,
+            model='gpt-4-turbo-preview',
+            messages=messages,
+            tools=TOOLS,
+            tool_choice="auto",
+            timeout= 30.0,
+        )
+        
+    except Exception as e:
+        print(f"Something went wrong: {e}")
+        res = "Snap! Something went wrong, please try again!"
+
+    return res
+
+async def ragchat(user_id, chat_history):
+
+    res = await chat(chat_history)
+
+    # Check for tool_calls in the response
+    if res.choices[0].message.tool_calls is not None:
+        print("Calling API!")
+        tool_call_arguments = json.loads(res.choices[0].message.tool_calls[0].function.arguments)
+
+        # Extract query
+        function_call_query = tool_call_arguments["query"]
+        print(function_call_query)
+
+        try:
+            
+                res = await agent(function_call_query)
+                print(f"Query processed succesfully!")
+                
+        
+        except Exception as e:
+                print(f"OpenAI completion failed: {e}")
+                return("Snap! Something went wrong, please ask your question again!")
+
+        USER_STATES[user_id]['previous_queries'][-1]['assistant'] = res
+
+        return res
+    
+    # Extract reply content
+    elif res.choices[0].message.content is not None:
+        reply = res.choices[0].message.content
+        USER_STATES[user_id]['previous_queries'][-1]['assistant'] = reply
+
+        return reply
+    
+
+# RAGChat route
+@app.post('/agent') 
+#async def react_description(query: Query, api_key: str = Depends(get_api_key)): 
+async def react_description(query: Query): # to demonstrate the UI 
+
+    # Deconstruct incoming query
+    user_id = query.user_id
+    user_input = query.user_input.strip()
+
+    # Create a conversation history for new users
+    convo_start = time.time()
+    USER_STATES.setdefault(user_id, {
+        'previous_queries': [],
+        'timestamp': convo_start
+    })
+
+    USER_STATES[user_id]['previous_queries'].append({'user': user_input})
+    previous_conversations = USER_STATES[user_id]['previous_queries'][-4:]
+
+    # Format previous conversations for RAG
+    formatted_history = ""
+    for conv in previous_conversations:
+        formatted_history += f"User: {conv.get('user', '')}\nAssistant: {conv.get('assistant', '')}\n"
+
+    # Construct the query string with complete chat history
+    chat_history = f"CHAT HISTORY: \n\n{formatted_history.strip()}"
+
+    try:
+
+        # Start RAG
+        response = await ragchat(user_id, chat_history)     
+
+        #Clean response
+        cleaned_response = response.replace("**", "").replace("Manager", "'My Ledger'")
+
+        # Print for debugging
+        print(
+            
+            chat_history + "\n",
+            response + "\n\n"
+                
+        )          
+                        
+        # Return response to user
+        return {'output': cleaned_response}
+    
+    except Exception as e:
+
+        print(f"Something went wrong: {e}")
+        return{"output": "Sorry, something went wrong, please try again!"}
+    
+
+# UI
+templates = Jinja2Templates(directory="templates")
+app.mount("/static", StaticFiles(directory="static"), name="./static/BBALP00A.TTF")
+@app.get("/", response_class=HTMLResponse)
+async def root(request: Request):
+    return templates.TemplateResponse("index.html", {"request": request})
+    
