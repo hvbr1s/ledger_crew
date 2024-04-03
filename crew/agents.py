@@ -11,7 +11,8 @@ focused_llm = ChatOpenAI(
 )
 
 creative_llm = ChatOpenAI(
-    model="gpt-4-turbo-preview"
+    model="gpt-4-turbo-preview",
+    temperature=0.2
 )
 
 
@@ -57,5 +58,17 @@ topic_getter = Agent(
     llm=focused_llm,
     memory=True,
     tools= human_tools,
+    
+)
+
+sales_assistant = Agent(
+    role='A seasoned sales person working for Ledger',
+    goal='Consult with the human customer to understand which Ledger product would best fit their needs and answer their questions about the products',
+    backstory="""With a flair for simplifying complex topics, you
+    are able to browse documentation provided by the Senior Researcher to provide answers to questions about Ledger products, from the most basic to the most technical.""",
+    verbose=True,
+    allow_delegation=False,
+    llm=creative_llm,
+    memory=True,
 )
 
