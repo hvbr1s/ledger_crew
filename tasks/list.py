@@ -37,8 +37,12 @@ assist_customer =  Task(
     description=(
         "Answer this question from a prospective customer looking to purchase Ledger products: {topic}"
     ),
-    expected_output="""A SHORT answer to this question: {topic}. Your answer must be friendly and engaging but ALWAYS be 3 sentences or less.  Use the provided documentation to inform your response. 
+    expected_output=
+    """
+    A SHORT answer to this question: {topic}. Your answer must be friendly and engaging but ALWAYS be 3 sentences or less.  Use the provided documentation to inform your response. 
     For more information, ALWAYS direct the customer to the official Ledger store (https://shop.ledger.com/) or the Ledger Academy (https://www.ledger.com/academy) when appropriate. NEVER share any other links.
+    ALWAYS share the URL links.
+    
     """,
     agent= sales_assistant,
     async_execution=False
