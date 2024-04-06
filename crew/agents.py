@@ -7,7 +7,7 @@ from utility.callback import print_agent_output
 human_tools = load_tools(["human"])
 
 focused_llm = ChatOpenAI(
-    model="gpt-4",
+    model="gpt-4-turbo-preview",
     temperature=0.0
 )
 
@@ -24,8 +24,10 @@ researcher = Agent(
   verbose=True,
   memory=True,
   backstory=(
-    "Driven by curiosity, you're at the forefront of"
-    "cybersecurity applied to blockchain and an expert in Ledger products including the Ledger Nano S Plus, Nano X, Ledger Stax and the Ledger Live app."
+    """
+      Driven by curiosity, you're at the forefront of cybersecurity applied to blockchain and an expert in Ledger products including the Ledger Nano S Plus, Nano X, Ledger Stax and the Ledger Live app.
+      
+    """
   ),
   tools=[retriever_tool],
   allow_delegation=False,
@@ -40,8 +42,10 @@ writer = Agent(
   verbose=True,
   memory=True,
   backstory=(
-    "With a flair for simplifying complex topics, you"
-    "are able to browse documentation provided by the Senior Researcher to write answers to the most complex technical questions about Ledger products."
+    """
+    With a flair for simplifying complex topics, you are able to browse documentation provided by the Senior Researcher to write answers to the most complex technical questions about Ledger products.
+    You're honest an always share your sources.
+    """
   ),
   allow_delegation=False,
   llm=creative_llm,
