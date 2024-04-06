@@ -1,15 +1,16 @@
 from crewai import Task
 from crew.agents import researcher, writer, topic_getter, sales_assistant
-# from langchain.agents import load_tools
 
 # Research task
 research_issue= Task(
   description=(
-    """Look into your Knowledge base to find the best answer to {topic}. 
-    Keep looking until you find a chunk that really answers the question in {topic}. 
+    """
+    Use your Knowledge base tool to find the best answer to: {topic}.
+    ALWAYS use your Knowledge Base tool to answer {topic}. NEVER reuse previous research.
+    Keep looking until you find information that correctly answers: {topic} . 
     Discard the parts that are not useful. Make sure to always cite your sources by adding a plain URL link (no markdown)"""
   ),
-  expected_output='The exact part of the documentation that answers: {topic}.',
+  expected_output='The exact part of the documentation that answers: {topic}',
   agent=researcher,
   async_execution=False,
 )
@@ -36,8 +37,8 @@ assist_customer =  Task(
     description=(
         "Answer this question from a prospective customer looking to purchase Ledger products: {topic}"
     ),
-    expected_output="""A SHORT answer to this question: {topic}. Your answer must be friedly and engaging. Use the provided documentation to help you. 
-    Direct the prospective customer to the Ledger website (https://www.ledger.com/), the official store (https://shop.ledger.com/) or the help center (https://support.ledger.com/) for more information when appropriate.
+    expected_output="""A SHORT answer to this question: {topic}. Your answer must be friendly and engaging but ALWAYS be 3 sentences or less.  Use the provided documentation to inform your response. 
+    For more information, ALWAYS direct the customer to the official Ledger store (https://shop.ledger.com/) or the Ledger Academy (https://www.ledger.com/academy) when appropriate. NEVER share any other links.
     """,
     agent= sales_assistant,
     async_execution=False
