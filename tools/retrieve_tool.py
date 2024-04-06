@@ -27,12 +27,13 @@ openai_client = OpenAI(
 
 
 @tool("Knowledge Base")
-def retriever_tool(user_input:str) -> str:
+def retriever_tool(new_query:str) -> str:
     """
-    Use this tool to consult your knowledge base when asked a technical question.
+    Use this tool to consult your knowledge base when asked a technical question. 
+    Always query the tool according to this format: new_query:{topic}. 
     """
     #Logging
-    print(f"Document retrieval in progress...")
+    print(f"...Document retrieval in progress for: {new_query}...")
     # Define context box
     contexts = []
     # Set clock
@@ -40,7 +41,7 @@ def retriever_tool(user_input:str) -> str:
     # Set locale
     locale = "eng"
     #Deconstruct user input
-    user_query = user_input
+    user_query = new_query
 
     # Define a dictionary to map locales to URL segments
     locale_url_map = {
