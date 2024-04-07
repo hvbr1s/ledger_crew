@@ -3,17 +3,48 @@ from tools.retrieve_tool import retriever_tool
 from langchain_openai import ChatOpenAI
 from langchain.agents import load_tools
 from utility.callback import print_agent_output
+import boto3
+import os
+
+
+# Initialize AWS secret management
+def access_secret_parameter(parameter_name):
+    ssm = boto3.client('ssm', region_name='eu-west-3')
+    response = ssm.get_parameter(
+        Name=parameter_name,
+        WithDecryption=True
+    )
+    return response['Parameter']['Value']
+
+env_vars = {
+    'ACCESS_KEY_ID': access_secret_parameter('ACCESS_KEY_ID'),
+    'SECRET_ACCESS_KEY': access_secret_parameter('SECRET_ACCESS_KEY'),
+    'OPENAI_API_KEY': access_secret_parameter('OPENAI_API_KEY'),
+}
+
+# Set up boto3 session with AWS credentials
+boto3.setup_default_session(
+    aws_access_key_id=os.getenv('ACCESS_KEY_ID', env_vars['ACCESS_KEY_ID']),
+    aws_secret_access_key=os.getenv('SECRET_ACCESS_KEY', env_vars['SECRET_ACCESS_KEY']),
+    region_name='eu-west-3'
+)
+
+# Initialize OpenAI client & Embedding model
+openai_key = env_vars['OPENAI_API_KEY']
+
 
 human_tools = load_tools(["human"])
 
 focused_llm = ChatOpenAI(
     model="gpt-4-turbo-preview",
-    temperature=0.0
+    temperature=0.0,
+    openai_api_key= openai_key
 )
 
 creative_llm = ChatOpenAI(
     model="gpt-4-turbo-preview",
-    temperature=0.2
+    temperature=0.2,
+    openai_api_key=openai_key
 )
 
 

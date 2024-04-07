@@ -4,26 +4,50 @@ from fastapi.security import APIKeyHeader
 from fastapi import FastAPI, HTTPException, Depends
 from crew.agents import researcher, writer, sales_assistant
 from tasks.list import research_issue, write, assist_customer
+from tools.retrieve_tool import simple_retrieve
 from utility.callback import print_agent_output
 from crewai import Crew, Process
-from fastapi.templating import Jinja2Templates
-from fastapi.staticfiles import StaticFiles
-from fastapi.responses import HTMLResponse
-from tools.retrieve_tool import retriever_tool
-from fastapi import Request
 from pydantic import BaseModel
 from openai import AsyncOpenAI
 from dotenv import main
 import json
 import asyncio
 import time
+import boto3
+
 
 # Initialize environment variables
 main.load_dotenv()
 
+# Initialize AWS secret management
+def access_secret_parameter(parameter_name):
+    ssm = boto3.client('ssm', region_name='eu-west-3')
+    response = ssm.get_parameter(
+        Name=parameter_name,
+        WithDecryption=True
+    )
+    return response['Parameter']['Value']
+
+env_vars = {
+    'ACCESS_KEY_ID': access_secret_parameter('ACCESS_KEY_ID'),
+    'SECRET_ACCESS_KEY': access_secret_parameter('SECRET_ACCESS_KEY'),
+    'BACKEND_API_KEY': access_secret_parameter('BACKEND_API_KEY'),
+    'OPENAI_API_KEY': access_secret_parameter('OPENAI_API_KEY'),
+    'PINECONE_API_KEY': access_secret_parameter('PINECONE_API_KEY'),
+    'PINECONE_ENVIRONMENT': access_secret_parameter('PINECONE_ENVIRONMENT'),
+    'COHERE_API_KEY': access_secret_parameter('COHERE_API_KEY')
+}
+
+# Set up boto3 session with AWS credentials
+boto3.setup_default_session(
+    aws_access_key_id=os.getenv('ACCESS_KEY_ID', env_vars['ACCESS_KEY_ID']),
+    aws_secret_access_key=os.getenv('SECRET_ACCESS_KEY', env_vars['SECRET_ACCESS_KEY']),
+    region_name='eu-west-3'
+)
+
 # Initialize backend API keys
-server_api_key=os.environ['BACKEND_API_KEY'] 
-API_KEY_NAME=os.environ['API_KEY_NAME'] 
+server_api_key=env_vars['BACKEND_API_KEY']
+API_KEY_NAME="Authorization"
 api_key_header = APIKeyHeader(name=API_KEY_NAME, auto_error=False)
 
 async def get_api_key(api_key_header: str = Depends(api_key_header)):
@@ -32,7 +56,7 @@ async def get_api_key(api_key_header: str = Depends(api_key_header)):
     return api_key_header
 
 # Initialize OpenAI client & Embedding model
-openai_key = os.environ['OPENAI_API_KEY']
+openai_key = env_vars['OPENAI_API_KEY']
 openai_client = AsyncOpenAI(
 
     api_key=openai_key,
@@ -75,7 +99,7 @@ async def agent(task):
 
 # Initialize user state and periodic cleanup function
 USER_STATES = {}
-TIMEOUT_SECONDS = 1800  # 30 minutes
+TIMEOUT_SECONDS = 3600  # 60 minutes
 
 async def periodic_cleanup():
     while True:
@@ -272,10 +296,22 @@ async def react_description(query: Query): # to demonstrate the UI
         return{"output": "Sorry, something went wrong, please try again!"}
     
 
-# UI
-templates = Jinja2Templates(directory="templates")
-app.mount("/static", StaticFiles(directory="static"), name="./static/BBALP00A.TTF")
-@app.get("/", response_class=HTMLResponse)
-async def root(request: Request):
-    return templates.TemplateResponse("index.html", {"request": request})
+# Pinecone retrieval route
+@app.post('/pinecone')
+async def react_description(query: Query, api_key: str = Depends(get_api_key)):
+    # Deconstruct incoming query
+    user_input = query.user_input.strip()
+    print(f'Simple RAG for query: {user_input}')
+
+    try:
+        # Start date retrieval and reranking
+        data = await simple_retrieve(user_input)
+        print(data)
+        
+    except Exception as e:
+        print(f'Error retrieving data: {e}')
+        data = "Couldn't reach my database, please try the query again."
+
+    return data
     
+# start command -> uvicorn aws:app --host 0.0.0.0 --port 8800
