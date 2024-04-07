@@ -1,30 +1,52 @@
 import os
-from dotenv import main
 from datetime import datetime
 from crewai_tools import tool
 from openai import OpenAI
 from pinecone import Pinecone
 import cohere
 import httpx
+import boto3
 
-# Initialize environment variables
-main.load_dotenv()
+# Initialize AWS secret management
+def access_secret_parameter(parameter_name):
+    ssm = boto3.client('ssm', region_name='eu-west-3')
+    response = ssm.get_parameter(
+        Name=parameter_name,
+        WithDecryption=True
+    )
+    return response['Parameter']['Value']
+
+env_vars = {
+    'ACCESS_KEY_ID': access_secret_parameter('ACCESS_KEY_ID'),
+    'SECRET_ACCESS_KEY': access_secret_parameter('SECRET_ACCESS_KEY'),
+    'OPENAI_API_KEY': access_secret_parameter('OPENAI_API_KEY'),
+    'PINECONE_API_KEY': access_secret_parameter('PINECONE_API_KEY'),
+    'PINECONE_ENVIRONMENT': access_secret_parameter('PINECONE_ENVIRONMENT'),
+    'COHERE_API_KEY': access_secret_parameter('COHERE_API_KEY')
+}
+
+# Set up boto3 session with AWS credentials
+boto3.setup_default_session(
+    aws_access_key_id=os.getenv('ACCESS_KEY_ID', env_vars['ACCESS_KEY_ID']),
+    aws_secret_access_key=os.getenv('SECRET_ACCESS_KEY', env_vars['SECRET_ACCESS_KEY']),
+    region_name='eu-west-3'
+)
+
 # Initialize Pinecone
-pinecone_key = os.environ['PINECONE_API_KEY']
+pinecone_key = env_vars['PINECONE_API_KEY']
 pc = Pinecone(
     api_key=pinecone_key,
 )
 pc_index = pc.Index("serverless-test")
 backup_index= pc.Index("prod")
 # Initialize Cohere
-cohere_key = os.environ["COHERE_API_KEY"]
+cohere_key = env_vars["COHERE_API_KEY"]
 co = cohere.Client(cohere_key)
 # Initialize OpenAI client & Embedding model
-openai_key = os.environ['OPENAI_API_KEY']
+openai_key = env_vars['OPENAI_API_KEY']
 openai_client = OpenAI(
     api_key=openai_key, 
 )
-
 
 
 @tool("Knowledge Base")
