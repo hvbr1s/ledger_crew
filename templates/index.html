@@ -395,64 +395,44 @@
 
 
     $(function() {
+    const userId = uuid.v4(); // Generate a UUID for the user
+    localStorage.setItem('user_id', userId); // Store the user_id for future use
+    $('form').submit(function(event) {
+      event.preventDefault();
+      const inputText = $('#input').val();
+      $('.loading').show();
+      $('#submit-btn').prop('disabled', true);
 
+      $.ajax({
+        type: 'POST',
+        url: 'http://127.0.0.1:8800/agent',
+        data: JSON.stringify({
+          user_input: inputText,
+          user_id: userId,
+          locale: "eng",
+          platform: "web"
+        }),
+        contentType: 'application/json',
+        success: function(response) {
+          $('.loading').hide();
+          const showdownConverter = new showdown.Converter({simpleLineBreaks: true, excludeTrailingPunctuationFromURLs: true, smartIndentationFix: true});
+          let chatbotOutput = showdownConverter.makeHtml(response.output);
 
-        // Generate a UUID for the user
-        var user_id = uuid.v4();
-        // Store the user_id in local storage or a cookie for future use
-        localStorage.setItem('user_id', user_id);
-        $('form').submit(function(event) {
-            event.preventDefault();
-            var input_text = $('#input').val();
-            $('.loading').show();
-            $('#submit-btn').prop('disabled', true);
-            $.ajax({
-                type: 'POST',
-                //url: ' https://hc-bot.onrender.com/gpt',
-                url: 'http://127.0.0.1:8800/agent',
-                data: JSON.stringify({
-                    user_input: input_text,
-                    user_id: user_id,
-                    locale: "eng",
-                    platform: "web"
-                }),
-                contentType: 'application/json',
-                success: function(response) {
-                    $('.loading').hide();
-                    var user_input = input_text;
-
-
-                    // Create a Showdown converter
-                    var conv = new showdown.Converter({simpleLineBreaks: true, excludeTrailingPunctuationFromURLs: true, smartIndentationFix: true});
-
-                    // Convert chatbot_output to HTML using Showdown
-                    var chatbot_output = conv.makeHtml(response.output);
-                    
-                    // Make links clickable
-                    chatbot_output = makeLinksClickable(chatbot_output);
-
-                    //Make links open in new tab
-                    chatbot_output = makeLinksOpenInNewTab(chatbot_output);
-
-                    updateConversation(user_input, chatbot_output);
-                    $('#input').val('');
-                },
-
-                error: function(jqXHR, textStatus, errorThrown) {
-                    $('.loading').hide();
-                    // Parse the error response (which should be JSON)
-                    var errorResponse = JSON.parse(jqXHR.responseText);
-                    var errorMessage = errorResponse.detail;
-                    // Display the error message to the user
-                    alert(errorMessage);
-                },
-
-                complete: function() {
-                    $('#submit-btn').prop('disabled', false);
-                }
-            });
-        });
+          chatbotOutput = makeLinksClickable(makeLinksOpenInNewTab(chatbotOutput));
+          updateConversation(inputText, chatbotOutput);
+          $('#input').val('');
+        },
+        error: function(jqXHR, textStatus, errorThrown) {
+          $('.loading').hide();
+          const errorResponse = JSON.parse(jqXHR.responseText);
+          alert(errorResponse.detail || 'An error occurred while processing your request.');
+        },
+        complete: function() {
+          $('#submit-btn').prop('disabled', false);
+        }
+      });
     });
+  });
 
     fithEle.style.display = 'flex'
 </script>

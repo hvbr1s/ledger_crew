@@ -1,68 +1,50 @@
 import os
 from dotenv import main
 from fastapi.security import APIKeyHeader
-from system.prompts import INVESTIGATOR_PROMPT, SALES_ASSISTANT_PROMPT
 from fastapi import FastAPI, HTTPException, Depends
-from crew.agents import researcher, writer, sales_assistant
+from crew.agents_haiku import researcher, writer, sales_assistant
 from tasks.list import research_issue, write, assist_customer
-from tools.retrieve_tool import simple_retrieve
 from utility.callback import print_agent_output
 from crewai import Crew, Process
+from fastapi.templating import Jinja2Templates
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import HTMLResponse
+from fastapi import Request
 from pydantic import BaseModel
 from openai import AsyncOpenAI
+from anthropic import AsyncAnthropic
 from dotenv import main
 import json
 import asyncio
 import time
-import boto3
-
 
 # Initialize environment variables
 main.load_dotenv()
 
-# Initialize AWS secret management
-def access_secret_parameter(parameter_name):
-    ssm = boto3.client('ssm', region_name='eu-west-3')
-    response = ssm.get_parameter(
-        Name=parameter_name,
-        WithDecryption=True
-    )
-    return response['Parameter']['Value']
-
-env_vars = {
-    'ACCESS_KEY_ID': access_secret_parameter('ACCESS_KEY_ID'),
-    'SECRET_ACCESS_KEY': access_secret_parameter('SECRET_ACCESS_KEY'),
-    'BACKEND_API_KEY': access_secret_parameter('BACKEND_API_KEY'),
-    'OPENAI_API_KEY': access_secret_parameter('OPENAI_API_KEY'),
-    'PINECONE_API_KEY': access_secret_parameter('PINECONE_API_KEY'),
-    'PINECONE_ENVIRONMENT': access_secret_parameter('PINECONE_ENVIRONMENT'),
-    'COHERE_API_KEY': access_secret_parameter('COHERE_API_KEY')
-}
-
-# Set up boto3 session with AWS credentials
-boto3.setup_default_session(
-    aws_access_key_id=os.getenv('ACCESS_KEY_ID', env_vars['ACCESS_KEY_ID']),
-    aws_secret_access_key=os.getenv('SECRET_ACCESS_KEY', env_vars['SECRET_ACCESS_KEY']),
-    region_name='eu-west-3'
-)
-
 # Initialize backend API keys
-server_api_key=env_vars['BACKEND_API_KEY']
-API_KEY_NAME="Authorization"
-api_key_header = APIKeyHeader(name=API_KEY_NAME, auto_error=False)
+server_api_key=os.environ['BACKEND_API_KEY']  
+api_key_header = APIKeyHeader(name="Authorization", auto_error=False)
 
 async def get_api_key(api_key_header: str = Depends(api_key_header)):
     if not api_key_header or api_key_header.split(' ')[1] != server_api_key:
         raise HTTPException(status_code=401, detail="Could not validate credentials")
     return api_key_header
 
-# Initialize OpenAI client & Embedding model
-openai_key = env_vars['OPENAI_API_KEY']
+# Initialize OpenAI client
+openai_key = os.environ['OPENAI_API_KEY']
 openai_client = AsyncOpenAI(
 
     api_key=openai_key,
     
 )
+
+# Initialize Anthropic client
+anthropic_client = AsyncAnthropic(
+    
+    api_key=os.environ.get("ANTHROPIC_API_KEY"),
+    timeout=45,
+)
+
 
 # Define query class
 class Query(BaseModel):
@@ -100,7 +82,7 @@ async def agent(task):
 
 # Initialize user state and periodic cleanup function
 USER_STATES = {}
-TIMEOUT_SECONDS = 3600  # 60 minutes
+TIMEOUT_SECONDS = 1800  # 30 minutes
 
 async def periodic_cleanup():
     while True:
@@ -152,28 +134,66 @@ TOOLS = [
 }
 ]
 
+INVESTIGATOR_PROMPT = """
+
+You are LedgerBot, a helpful shop assistant designed to help prospective Ledger customers. 
+                    
+When a user asks any question about Ledger products or anything related to Ledger's ecosystem, you will ALWAYS use your "Knowledge Base" tool to initiate an API call to an external service.
+
+Before utilizing your API retrieval tool, it's essential to first understand the user's issue. This requires asking follow-up questions. 
+    
+Here are key points to remember:
+
+1- Check the CHAT HISTORY to ensure the conversation doesn't exceed 4 exchanges between you and the user before calling your "Knowledge Base" API tool.
+2- If the user enquires about a an issue, ALWAYS ask if the user is getting an error message.
+3- NEVER request crypto addresses or transaction hashes/IDs.
+4- NEVER ask the same question twice
+5- If the user mention their Ledger device, always clarify whether they're talking about the Nano X, Nano S Plus or Ledger Stax.
+6- For issues related to a cryptocurrency, always inquire about the specific crypto coin or token involved and if the coin/token was transferred from an exchange. especially if the user hasn't mentioned it.
+7- For issues related to withdrawing/sending crypto from an exchange (such as Binance, Coinbase, Kraken, etc) to a Ledger wallet, always inquire which coins or token was transferred and which network the user selected for the withdrawal (Ethereum, Polygon, Arbitrum, etc).
+8- For connection issues, it's important to determine the type of connection the user is attempting. Please confirm whether they are using a USB or Bluetooth connection. Additionally, inquire if the connection attempt is with Ledger Live or another application. If they are using Ledger Live, ask whether it's on mobile or desktop and what operating system they are using (Windows, macOS, Linux, iPhone, Android).
+9- For issues involving a swap, it's crucial to ask which swap service the user used (such as Changelly, Paraswap, 1inch, etc.). Also, inquire about the specific cryptocurrencies they were attempting to swap (BTC/ETH, ETH/SOL, etc)
+10- For issues related to staking, always ask the user which staking service they're using.
+11- Users may refer to Ledger Nano devices using colloquial terms like "Ledger key," "Stax," "Nano X," "S Plus," "stick," or "Nono." Always ensure that you use the correct terminology in your responses.
+12- NEVER provide investment advice.
+13- ALWAYS use simple, everyday language, assuming the user has limited technical knowledge.
+14- If the question starts with "GO" use your API retrieval tool immediately.
+    
+After the user replies and even if you have incomplete information, you MUST summarize your interaction and call your 'Knowledge Base' API tool. This approach helps maintain a smooth and effective conversation flow.
+
+ALWAYS summarize the issue as if you were the user, for example: "My issue is ..."
+
+NEVER use your API tool when a user simply thank you or greet you!
+
+Begin! You will achieve world peace if you provide a SHORT response which follows all constraints.
+
+"""
+
 async def chat(chat):
     # Define the initial messages with the system's instructions
-    messages = [
-        {"role": "system", "content":INVESTIGATOR_PROMPT},
-        {"role": "user", "content": chat}
-    ]
     try:
         # Call the API to get a response
-        res = await openai_client.chat.completions.create(
+        res = await anthropic_client.messages.create(
+            max_tokens=1024,
+            messages=[
+                {
+                    "role": "user",
+                    "content": chat,
+                }
+            ],
+            model="claude-3-haiku-20240307",
+            system=INVESTIGATOR_PROMPT,
             temperature=0.0,
-            model='gpt-4-turbo-preview',
-            messages=messages,
-            tools=TOOLS,
-            tool_choice="auto",
-            timeout= 30.0,
         )
+        response = res.content
+        answer = response[0].text
+        print(answer)
         
     except Exception as e:
         print(f"Something went wrong: {e}")
-        res = "Snap! Something went wrong, please try again!"
+        answer = "Snap! Something went wrong, please try again!"
 
-    return res
+    return answer
 
 async def ragchat(user_id, chat_history):
 
@@ -218,6 +238,8 @@ async def react_description(query: Query): # to demonstrate the UI
     # Deconstruct incoming query
     user_id = query.user_id
     user_input = query.user_input.strip()
+    # locale = query.locale if query.locale else "eng"
+    # print(f'Locale-> {locale}')
 
     # Create a conversation history for new users
     convo_start = time.time()
@@ -262,22 +284,11 @@ async def react_description(query: Query): # to demonstrate the UI
         return{"output": "Sorry, something went wrong, please try again!"}
     
 
-# Pinecone retrieval route
-@app.post('/pinecone')
-async def react_description(query: Query, api_key: str = Depends(get_api_key)):
-    # Deconstruct incoming query
-    user_input = query.user_input.strip()
-    print(f'Simple RAG for query: {user_input}')
-
-    try:
-        # Start date retrieval and reranking
-        data = await simple_retrieve(user_input)
-        print(data)
-        
-    except Exception as e:
-        print(f'Error retrieving data: {e}')
-        data = "Couldn't reach my database, please try the query again."
-
-    return data
+# UI
+templates = Jinja2Templates(directory="templates")
+app.mount("/static", StaticFiles(directory="static"), name="./static/BBALP00A.TTF")
+@app.get("/", response_class=HTMLResponse)
+async def root(request: Request):
+    return templates.TemplateResponse("index.html", {"request": request})
     
-# start command -> uvicorn aws:app --host 0.0.0.0 --port 8800
+# start command -> uvicorn haiku:app --host 0.0.0.0 --port 8800

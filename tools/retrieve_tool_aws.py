@@ -1,8 +1,7 @@
 import os
 from datetime import datetime
 from crewai_tools import tool
-from openai import OpenAI
-from openai import AsyncOpenAI
+from openai import OpenAI, AsyncOpenAI
 from pinecone import Pinecone
 import cohere
 import httpx
@@ -51,8 +50,8 @@ async_client = AsyncOpenAI(api_key=openai_key)
 @tool("Knowledge Base")
 def retriever_tool(new_query:str) -> str:
     """
-    Use this tool to consult your knowledge base when asked a technical question.
-    Always query the tool according to this format: new_query:{topic}.
+    Use this tool to consult your knowledge base when asked a technical question. 
+    Always query the tool according to this format: new_query:{topic}. 
     """
     #Logging
     print(f"...Document retrieval in progress for: {new_query}...")
@@ -75,18 +74,18 @@ def retriever_tool(new_query:str) -> str:
     # Check if the locale is in the map, otherwise default to "/en-us/"
     url_segment = locale_url_map.get(locale, "/en-us/")
 
-    try:
+    try:            
         # Call the OpenAI embedding function
         res = openai_client.embeddings.create(
-            input=user_query,
+            input=user_query, 
             model='text-embedding-3-large',
         )
         xq = res.data[0].embedding
-
+        
     except Exception as e:
         print(f"Embedding failed: {e}")
         return(e)
-
+    
     # Query Pinecone
     try:
         try:
@@ -122,7 +121,7 @@ def retriever_tool(new_query:str) -> str:
         docs = [f"{x['metadata']['title']}: {x['metadata']['text']}{learn_more_text}: {x['metadata'].get('source', 'N/A').replace('/en-us/', url_segment)}"
         for x in res_query["matches"]]
 
-
+        
     except Exception as e:
         print(f"Pinecone query failed: {e}")
         return
@@ -157,7 +156,7 @@ def retriever_tool(new_query:str) -> str:
         for result in rerank_docs.results:  # Access the results attribute directly
             reranked = result.document.text  # Access the text attribute of the document
             contexts.append(reranked)
-
+        
     except Exception as e:
         print(f"Reranking failed: {e}")
         # Fallback to simpler retrieval without Cohere if reranking fails
@@ -169,7 +168,7 @@ def retriever_tool(new_query:str) -> str:
             context_url = "\nLearn more: " + item['metadata'].get('source', 'N/A')
             context += context_url
             contexts.append(context)
-
+        
     # Construct the augmented query string with locale, contexts, chat history, and user input
     if locale == 'fr':
         augmented_contexts = "La date d'aujourdh'hui est: " + timestamp + "\n\n" + "\n\n".join(contexts)
@@ -198,15 +197,15 @@ async def simple_retrieve(user_input):
     # Check if the locale is in the map, otherwise default to "/en-us/"
     url_segment = locale_url_map.get(locale, "/en-us/")
 
-    try:
+    try:            
             # Call the OpenAI embedding function
             res = await async_client.embeddings.create(
-                input=user_input,
+                input=user_input, 
                 model='text-embedding-3-large',
                 dimensions=3072
             )
             xq = res.data[0].embedding
-
+        
     except Exception as e:
             print(f"Embedding failed: {e}")
             return(e)
@@ -220,10 +219,10 @@ async def simple_retrieve(user_input):
                     "https://serverless-test-e865e64.svc.apw5-4e34-81fa.pinecone.io/query",
                     json={
 
-                        "vector": xq,
+                        "vector": xq, 
                         "topK": 8,
-                        "namespace": "eng",
-                        "includeValues": True,
+                        "namespace": "eng", 
+                        "includeValues": True, 
                         "includeMetadata": True
 
                     },
@@ -231,7 +230,7 @@ async def simple_retrieve(user_input):
 
                         "Api-Key": pinecone_key,
                         "Accept": "application/json",
-                        "Content-Type": "application/json"
+                        "Content-Type": "application/json" 
 
                     },
                     timeout=8,
@@ -248,10 +247,10 @@ async def simple_retrieve(user_input):
                         "https://prod-e865e64.svc.northamerica-northeast1-gcp.pinecone.io/query",
                         json={
 
-                            "vector": xq,
+                            "vector": xq, 
                             "topK": 8,
-                            "namespace": "eng",
-                            "includeValues": True,
+                            "namespace": "eng", 
+                            "includeValues": True, 
                             "includeMetadata": True
 
                         },
@@ -259,7 +258,7 @@ async def simple_retrieve(user_input):
 
                             "Api-Key": pinecone_key,
                             "Accept": "application/json",
-                            "Content-Type": "application/json"
+                            "Content-Type": "application/json" 
 
                         },
                         timeout=25,
@@ -270,12 +269,12 @@ async def simple_retrieve(user_input):
                 except Exception as e:
                     print(f"Fallback Pinecone query failed: {e}")
                     return
-
+  
             # Format docs from Pinecone response
             learn_more_text = ('\nLearn more at')
             docs = [{"text": f"{x['metadata']['title']}: {x['metadata']['text']}{learn_more_text}: {x['metadata'].get('source', 'N/A').replace('/en-us/', url_segment)}"}
                     for x in res_query["matches"]]
-
+            
         except Exception as e:
             print(f"Pinecone query failed: {e}")
             docs = "Couldn't contact my knowledge base. Please ask the user to repeat the question."
@@ -283,17 +282,17 @@ async def simple_retrieve(user_input):
         # Try re-ranking with Cohere
         try:
             # Dynamically choose reranker model based on locale
-            reranker_main = '04461047-71d5-4a8e-a984-1916adbcd394-ft' # finetuned on March 11, 2024
+            reranker_main = '04461047-71d5-4a8e-a984-1916adbcd394-ft' # finetuned on March 11, 2024 
             reranker_backup = 'rerank-multilingual-v2.0' if locale in ['fr', 'ru'] else 'rerank-english-v2.0'
 
-            try:
+            try:# Rerank docs with Cohere
                 rerank_response = await client.post(
                     "https://api.cohere.ai/v1/rerank",
                     json={
 
                         "model": reranker_main,
-                        "query": user_input,
-                        "documents": docs,
+                        "query": user_input, 
+                        "documents": docs, 
                         "top_n": 2,
                         "return_documents": True,
 
@@ -320,8 +319,8 @@ async def simple_retrieve(user_input):
                     json={
 
                         "model": reranker_backup,
-                        "query": user_input,
-                        "documents": docs,
+                        "query": user_input, 
+                        "documents": docs, 
                         "top_n": 2,
                         "return_documents": True,
 

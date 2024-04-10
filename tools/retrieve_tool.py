@@ -2,7 +2,7 @@ import os
 from dotenv import main
 from datetime import datetime
 from crewai_tools import tool
-from openai import OpenAI
+from openai import OpenAI, AsyncOpenAI
 from pinecone import Pinecone
 import cohere
 import httpx
@@ -21,11 +21,8 @@ cohere_key = os.environ["COHERE_API_KEY"]
 co = cohere.Client(cohere_key)
 # Initialize OpenAI client & Embedding model
 openai_key = os.environ['OPENAI_API_KEY']
-openai_client = OpenAI(
-    api_key=openai_key, 
-)
-
-
+openai_client = OpenAI(api_key=openai_key)
+async_client = AsyncOpenAI(api_key=openai_key)
 
 @tool("Knowledge Base")
 def retriever_tool(new_query:str) -> str:
@@ -167,9 +164,6 @@ async def simple_retrieve(user_input):
      # Set clock
     timestamp = datetime.now().strftime("%B %d, %Y")
 
-    joint_query = joint_query or user_input
-    rephrased_query = rephrased_query or user_input
-
     # Define a dictionary to map locales to URL segments
     locale_url_map = {
         "fr": "/fr-fr/",
@@ -182,8 +176,8 @@ async def simple_retrieve(user_input):
 
     try:            
             # Call the OpenAI embedding function
-            res = await openai_client.embeddings.create(
-                input=joint_query, 
+            res = await async_client.embeddings.create(
+                input=user_input, 
                 model='text-embedding-3-large',
                 dimensions=3072
             )
@@ -274,7 +268,7 @@ async def simple_retrieve(user_input):
                     json={
 
                         "model": reranker_main,
-                        "query": rephrased_query, 
+                        "query": user_input, 
                         "documents": docs, 
                         "top_n": 2,
                         "return_documents": True,
@@ -302,7 +296,7 @@ async def simple_retrieve(user_input):
                     json={
 
                         "model": reranker_backup,
-                        "query": rephrased_query, 
+                        "query": user_input, 
                         "documents": docs, 
                         "top_n": 2,
                         "return_documents": True,

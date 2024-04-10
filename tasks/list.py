@@ -1,18 +1,19 @@
 from crewai import Task
 from crew.agents import researcher, writer, topic_getter, sales_assistant
+#from crew.agents_haiku import researcher, writer, topic_getter, sales_assistant
 
 # Research task
 research_issue= Task(
   description=(
     """
     Use your Knowledge base tool to find the best answer to: {topic}.
-    ALWAYS use your Knowledge Base tool to answer {topic}. NEVER reuse previous research.
+    ALWAYS use your Knowledge Base tool to answer {topic}.
     Keep looking until you find information that correctly answers: {topic} . 
     Discard the parts that are not useful. Make sure to always cite your sources by adding a plain URL link (no markdown)"""
   ),
   expected_output='The exact part of the documentation that answers: {topic}',
   agent=researcher,
-  async_execution=False,
+  async_execution=True,
 )
 
 write= Task(
@@ -39,12 +40,13 @@ assist_customer =  Task(
     ),
     expected_output=
     """
-    A SHORT answer to this question: {topic}. Your answer must be friendly and engaging but ALWAYS be 3 sentences or less.  Use the provided documentation to inform your response. 
-    For more information, ALWAYS direct the customer to the official Ledger store (https://shop.ledger.com/) or the Ledger Academy (https://www.ledger.com/academy) when appropriate. NEVER share any other links.
-    ALWAYS share the URL links.
+    A SHORT answer to this question: {topic}. Your answer must be friendly and engaging but ALWAYS be 3 sentences or less. Use the provided documentation to inform your response.
+    For more information, ALWAYS direct the customer to the official Ledger resources. Encourage visiting the Ledger store at https://shop.ledger.com/ for product purchases and the Ledger Academy at https://www.ledger.com/academy for educational content. 
+    Ensure these links are embedded in the respective terms "Ledger store" and "Ledger Academy" whenever they are mentioned.
+    ALWAYS insert a line break before directing the customer to the Ledger store or Ledger Academy.
     
     """,
     agent= sales_assistant,
-    async_execution=False
+    async_execution=True
 
 )
