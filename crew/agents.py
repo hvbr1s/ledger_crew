@@ -7,12 +7,12 @@ from utility.callback import print_agent_output
 human_tools = load_tools(["human"])
 
 focused_llm = ChatOpenAI(
-    model="gpt-4-turbo-preview",
+    model="gpt-4-turbo",
     temperature=0.0
 )
 
 creative_llm = ChatOpenAI(
-    model="gpt-4-turbo-preview",
+    model="gpt-4-turbo",
     temperature=0.2
 )
 

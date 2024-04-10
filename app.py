@@ -138,7 +138,7 @@ async def chat(chat):
         # Call the API to get a response
         res = await openai_client.chat.completions.create(
             temperature=0.0,
-            model='gpt-4-turbo-preview',
+            model='gpt-4-turbo',
             messages=messages,
             tools=TOOLS,
             tool_choice="auto",
@@ -167,16 +167,14 @@ async def ragchat(user_id, chat_history):
         function_call_query = tool_call_arguments["query"]
         print(f'API Query-> {function_call_query}')
 
-        # Rag and augmented query if OpenAI is used instead of CrewAI
+        ##### OpenAI #####
         retrieved_context = await simple_retrieve(function_call_query)
         troubleshoot_instructions = "CONTEXT: " + "\n" + timestamp + " ." + retrieved_context + "\n\n" + "----" + "\n\n" + "ISSUE: " + "\n" + function_call_query
 
         try:
-            
-                #res = await agent(function_call_query) # use CrewAI
                 res = await openai_client.chat.completions.create(
                     temperature=0.0,
-                    model='gpt-4-turbo-preview',
+                    model='gpt-4-turbo',
                     messages=[
 
                         {"role": "system", "content": SALES_ASSISTANT_PROMPT },
@@ -187,7 +185,14 @@ async def ragchat(user_id, chat_history):
                 )             
                 new_reply = res.choices[0].message.content    
                 print(f"Query processed succesfully!")
-                
+      
+        ######  CrewAI  #######
+
+        # try:
+
+            #res = await agent(function_call_query) # use CrewAI
+            # new_reply = res.choices[0].message.content    
+            # print(f"Query processed succesfully!")
         
         except Exception as e:
                 print(f"OpenAI completion failed: {e}")
