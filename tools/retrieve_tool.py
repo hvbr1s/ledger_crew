@@ -106,8 +106,8 @@ def retriever_tool(new_query:str) -> str:
     # Try re-ranking with Cohere
     try:
         # Dynamically choose reranker model based on locale
-        reranker_main = '04461047-71d5-4a8e-a984-1916adbcd394-ft'
-        reranker_backup = 'rerank-multilingual-v2.0' if locale in ['fr', 'ru'] else 'rerank-english-v2.0'
+        reranker_main = 'rerank-multilingual-v3.0' if locale in ['fr', 'ru'] else '04461047-71d5-4a8e-a984-1916adbcd394-ft'
+        reranker_backup = 'rerank-multilingual-v3.0' if locale in ['fr', 'ru'] else 'rerank-english-v3.0'
 
         try:# Rerank docs with Cohere
 
