@@ -221,7 +221,7 @@ async def react_description(query: Query): # to demonstrate the UI
     })
 
     USER_STATES[user_id]['previous_queries'].append({'user': user_input})
-    previous_conversations = USER_STATES[user_id]['previous_queries'][-4:]
+    previous_conversations = USER_STATES[user_id]['previous_queries'][-6:]
 
     # Format previous conversations for RAG
     formatted_history = ""
