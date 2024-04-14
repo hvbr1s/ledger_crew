@@ -51,25 +51,17 @@ class Query(BaseModel):
 # Initialize app
 app = FastAPI()
 
-# Create new Crew
-def create_crew():
-    """Factory function to create a new Crew."""
-    return Crew(
-        agents=[researcher, sales_assistant], 
-        tasks=[research_issue, assist_customer], 
-        process=Process.sequential,
-        step_callback=lambda x: print_agent_output(x, "MasterCrew Agent"),
-        share_crew=False,
-        cache=False,
-        memory=False
-    )
+# Ready the crew
+crew = Crew(
+  agents=[researcher, sales_assistant],
+  tasks=[research_issue, assist_customer],
+  process=Process.sequential,
+  verbose= 1,
+)
 
 # Agent handling function
 async def agent(task):
     print(f"Processing task-> {task}")
-    # Ready the crew
-    crew = create_crew()
-    # Kickoff!
     response = crew.kickoff(inputs={"topic": task})
     return response
 
@@ -168,31 +160,32 @@ async def ragchat(user_id, chat_history):
         print(f'API Query-> {function_call_query}')
 
         ##### OpenAI #####
-        retrieved_context = await simple_retrieve(function_call_query)
-        troubleshoot_instructions = "CONTEXT: " + "\n" + timestamp + " ." + retrieved_context + "\n\n" + "----" + "\n\n" + "ISSUE: " + "\n" + function_call_query
+        # retrieved_context = await simple_retrieve(function_call_query)
+        # troubleshoot_instructions = "CONTEXT: " + "\n" + timestamp + " ." + retrieved_context + "\n\n" + "----" + "\n\n" + "ISSUE: " + "\n" + function_call_query
 
-        try:
-                res = await openai_client.chat.completions.create(
-                    temperature=0.0,
-                    model='gpt-4-turbo',
-                    messages=[
+        # try:
+        #         res = await openai_client.chat.completions.create(
+        #             temperature=0.0,
+        #             model='gpt-4-turbo',
+        #             messages=[
 
-                        {"role": "system", "content": SALES_ASSISTANT_PROMPT },
-                        {"role": "user", "content": troubleshoot_instructions}
+        #                 {"role": "system", "content": SALES_ASSISTANT_PROMPT },
+        #                 {"role": "user", "content": troubleshoot_instructions}
 
-                    ],
-                    timeout= 45.0
-                )             
-                new_reply = res.choices[0].message.content    
-                print(f"Query processed succesfully!")
+        #             ],
+        #             timeout= 45.0
+        #         )             
+        #         new_reply = res.choices[0].message.content    
+        #         print(f"Query processed succesfully!")
       
         ######  CrewAI  #######
 
-        # try:
+        try:
 
-            #res = await agent(function_call_query) # use CrewAI
-            # new_reply = res.choices[0].message.content    
-            # print(f"Query processed succesfully!")
+            res = await agent(function_call_query) # use CrewAI
+            print(res)
+            #new_reply = res.choices[0].message.content  
+            print(f"Query processed succesfully!")
         
         except Exception as e:
                 print(f"OpenAI completion failed: {e}")
@@ -200,7 +193,7 @@ async def ragchat(user_id, chat_history):
 
         USER_STATES[user_id]['previous_queries'][-1]['assistant'] = res
 
-        return new_reply
+        return res
     
     # Extract reply content
     elif res.choices[0].message.content is not None:
@@ -219,7 +212,6 @@ async def react_description(query: Query): # to demonstrate the UI
     user_id = query.user_id
     user_input = query.user_input.strip()
     # locale = query.locale if query.locale else "eng"
-    # print(f'Locale-> {locale}')
 
     # Create a conversation history for new users
     convo_start = time.time()
@@ -242,18 +234,22 @@ async def react_description(query: Query): # to demonstrate the UI
     try:
 
         # Start RAG
-        response = await ragchat(user_id, chat_history)     
+        response = await ragchat(user_id, chat_history)
+        print(f'Response received-> {response}')     
 
         #Clean response
         cleaned_response = response.replace("**", "").replace("Manager", "'My Ledger'")
 
         # Print for debugging
-        print(
-            
-            chat_history + "\n",
-            response + "\n\n"
-                
-        )          
+        log_entry = f"""
+----------------{f"User ID: {user_id}"}----------------
+Full query: {query}
+Concise query: {user_input}
+Chat history: {formatted_history.strip()}
+Final Output: {cleaned_response}
+---------------------------------------
+"""
+        print(log_entry)      
                         
         # Return response to user
         return {'output': cleaned_response}

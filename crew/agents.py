@@ -40,7 +40,6 @@ writer = Agent(
   role='Senior Writer',
   goal='Write an answer to the customer.',
   verbose=True,
-  memory=True,
   backstory=(
     """
     With a flair for simplifying complex topics, you are able to browse documentation provided by the Senior Researcher to write answers to the most complex technical questions about Ledger products.
@@ -50,6 +49,7 @@ writer = Agent(
   allow_delegation=False,
   llm=creative_llm,
   step_callback=lambda x: print_agent_output(x,"Senior Writer"),
+  memory=False,
 )
 
 
@@ -73,7 +73,6 @@ sales_assistant = Agent(
     goal='Consult with the human customer to understand which Ledger product would best fit their needs and answer their questions about the products',
     backstory="""With a flair for simplifying complex topics, you
     are able to browse documentation provided by the Senior Researcher to provide answers to questions about Ledger products, from the most basic to the most technical.
-    For more information, ALWAYS direct the customer to the official Ledger store (https://shop.ledger.com/) or the Ledger Academy (https://www.ledger.com/academy) when appropriate.
     """,
     verbose=True,
     allow_delegation=False,
@@ -82,3 +81,4 @@ sales_assistant = Agent(
     step_callback=lambda x: print_agent_output(x,"Senior sales Assistant"),
 )
 
+#For more information, ALWAYS direct the customer to the official Ledger store (https://shop.ledger.com/) or the Ledger Academy (https://www.ledger.com/academy) when appropriate.
