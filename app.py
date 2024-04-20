@@ -6,7 +6,6 @@ from fastapi.security import APIKeyHeader
 from fastapi import FastAPI, HTTPException, Depends
 from crew.agents import researcher, writer, sales_assistant
 from tasks.list import research_issue, write, assist_customer
-from utility.callback import print_agent_output
 from crewai import Crew, Process
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
