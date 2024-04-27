@@ -19,6 +19,8 @@ import json
 import asyncio
 import time
 
+
+
 # Initialize environment variables
 main.load_dotenv()
 
@@ -33,11 +35,17 @@ async def get_api_key(api_key_header: str = Depends(api_key_header)):
 
 # Initialize OpenAI client & Embedding model
 openai_key = os.environ['OPENAI_API_KEY']
-openai_client = AsyncOpenAI(
+openai_client = AsyncOpenAI(api_key=openai_key)
+gpt = 'gpt-4-turbo'
 
-    api_key=openai_key,
-    
+# Initialize Groq client
+from groq import Groq
+groq_client = Groq(
+    api_key=os.environ["GROQ_API_KEY"],
 )
+llama = 'llama3-8b-8192'
+
+
 
 # Define query class
 class Query(BaseModel):
@@ -127,9 +135,9 @@ async def chat(chat):
     ]
     try:
         # Call the API to get a response
-        res = await openai_client.chat.completions.create(
+        res = await openai_client.chat.completions.create( 
             temperature=0.0,
-            model='gpt-4-turbo',
+            model=gpt,
             messages=messages,
             tools=TOOLS,
             tool_choice="auto",
@@ -159,32 +167,33 @@ async def ragchat(user_id, chat_history):
         print(f'API Query-> {function_call_query}')
 
         ##### OpenAI #####
-        # retrieved_context = await simple_retrieve(function_call_query)
-        # troubleshoot_instructions = "CONTEXT: " + "\n" + timestamp + " ." + retrieved_context + "\n\n" + "----" + "\n\n" + "ISSUE: " + "\n" + function_call_query
+        retrieved_context = await simple_retrieve(function_call_query)
+        troubleshoot_instructions = "CONTEXT: " + "\n" + timestamp + " ." + retrieved_context + "\n\n" + "----" + "\n\n" + "ISSUE: " + "\n" + function_call_query
 
-        # try:
-        #         res = await openai_client.chat.completions.create(
-        #             temperature=0.0,
-        #             model='gpt-4-turbo',
-        #             messages=[
+        try:
+                #res = await openai_client.chat.completions.create(
+                res = groq_client.chat.completions.create( #with Llama3
+                    temperature=0.0,
+                    model=llama,
+                    messages=[
 
-        #                 {"role": "system", "content": SALES_ASSISTANT_PROMPT },
-        #                 {"role": "user", "content": troubleshoot_instructions}
+                        {"role": "system", "content": SALES_ASSISTANT_PROMPT },
+                        {"role": "user", "content": troubleshoot_instructions}
 
-        #             ],
-        #             timeout= 45.0
-        #         )             
-        #         new_reply = res.choices[0].message.content    
-        #         print(f"Query processed succesfully!")
+                    ],
+                    timeout= 45.0
+                )
+                new_reply = res.choices[0].message.content
+                print(f"Query processed succesfully!")
       
         ######  CrewAI  #######
 
-        try:
+        # try:
 
-            res = await agent(function_call_query) # use CrewAI
-            print(res)
-            #new_reply = res.choices[0].message.content  
-            print(f"Query processed succesfully!")
+        #     res = await agent(function_call_query) # use CrewAI
+        #     print(res)
+        #     #new_reply = res.choices[0].message.content  
+        #     print(f"Query processed succesfully!")
         
         except Exception as e:
                 print(f"OpenAI completion failed: {e}")
@@ -192,7 +201,7 @@ async def ragchat(user_id, chat_history):
 
         USER_STATES[user_id]['previous_queries'][-1]['assistant'] = res
 
-        return res
+        return new_reply
     
     # Extract reply content
     elif res.choices[0].message.content is not None:
