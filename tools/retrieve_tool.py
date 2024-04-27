@@ -14,8 +14,8 @@ pinecone_key = os.environ['PINECONE_API_KEY']
 pc = Pinecone(
     api_key=pinecone_key,
 )
-pc_index = pc.Index("db")
-backup_index= pc.Index("prod")
+pc_index = pc.Index("main")
+backup_index= pc.Index("backup")
 # Initialize Cohere
 cohere_key = os.environ["COHERE_API_KEY"]
 co = cohere.Client(cohere_key)
