@@ -345,5 +345,3 @@ async def simple_retrieve(user_input):
 #     test = await retriever_tool("is Ledger recover safe?")
 #     print(test)
 # asyncio.run(main())
-
-

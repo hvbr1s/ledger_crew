@@ -1,6 +1,6 @@
-import os
 import gradio as gr
 import uuid
+import os
 from dotenv import main
 from system.prompts import INVESTIGATOR_PROMPT, SALES_ASSISTANT_PROMPT
 from tools.retrieve_tool import simple_retrieve
@@ -9,9 +9,6 @@ from fastapi import FastAPI, HTTPException, Depends
 from crew.agents import researcher, writer, sales_assistant
 from tasks.list import research_issue, write, assist_customer
 from crewai import Crew, Process
-from fastapi.templating import Jinja2Templates
-from fastapi.staticfiles import StaticFiles
-from fastapi.responses import HTMLResponse
 from fastapi import Request
 from pydantic import BaseModel
 from openai import AsyncOpenAI
@@ -261,45 +258,38 @@ Final Output: {cleaned_response}
         return{"output": "Sorry, something went wrong, please try again!"}
     
 
-# UI
-templates = Jinja2Templates(directory="templates")
-app.mount("/static", StaticFiles(directory="static"), name="./static/BBALP00A.TTF")
-@app.get("/", response_class=HTMLResponse)
-async def root(request: Request):
-    return templates.TemplateResponse("index.html", {"request": request})
 
-# Local start command: uvicorn app:app --reload --port 8800
-    
 # Gradio app
-# import gradio as gr
-# import uuid
-
-# # Define a wrapper function for Gradio that takes in the user input and user_id and returns the output
-# def gradio_wrapper(user_input, user_id):
-#     # Use the provided user_id or generate a new one if not provided
-#     user_id = user_id.strip() if user_id else str(uuid.uuid4())
+# Define a wrapper function for Gradio that takes in the user input and user_id and returns the output
+def gradio_wrapper(user_input, user_id):
+    # Use the provided user_id or generate a new one if not provided
+    user_id = user_id.strip() if user_id else str(uuid.uuid4())
     
-#     # Construct the Query object as expected by the react_description function
-#     query = Query(user_input=user_input, user_id=user_id)
+    # Construct the Query object as expected by the react_description function
+    query = Query(user_input=user_input, user_id=user_id)
     
-#     # Since react_description is an async function, we need to run it inside an asyncio event loop
-#     response = asyncio.run(react_description(query))
+    # Since react_description is an async function, we need to run it inside an asyncio event loop
+    response = asyncio.run(react_description(query))
     
-#     # Extract the output from the response
-#     return response['output']
+    # Extract the output from the response
+    return response['output']
 
-# # Create the Gradio interface with an additional input for user_id
-# iface = gr.Interface(
-#     fn=gradio_wrapper,
-#     inputs=[
-#         gr.Textbox(label="Question" ,lines=2, placeholder="Enter your query here..."),
-#         gr.Textbox(label="User ID (required)", placeholder="Enter any random number")
-#     ],
-#     outputs="text",
-#     title="SamBot",
-#     description="Ask SamBot anything!"
-# )
+# Create the Gradio interface with an additional input for user_id
+iface = gr.Interface(
+    fn=gradio_wrapper,
+    inputs=[
+        gr.Textbox(label="Question" ,lines=2, placeholder="Enter your query here..."),
+        gr.Textbox(label="User ID (required)", placeholder="Enter any random number")
+    ],
+    outputs="text",
+    title="SamBot",
+    description="Ask SamBot anything!"
+)
 
-# # Instead of running the FastAPI app with uvicorn, we run the Gradio app
-# if __name__ == "__main__":
-#     iface.launch(server_name="0.0.0.0", server_port=8800, share=True)
+# Instead of running the FastAPI app with uvicorn, we run the Gradio app
+if __name__ == "__main__":
+    iface.launch(server_name="0.0.0.0", server_port=8800, share=True)
+    
+
+
+
