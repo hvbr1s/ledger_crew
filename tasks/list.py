@@ -13,7 +13,7 @@ research_issue= Task(
 
     """
   ),
-  expected_output="Share the EXACT part or parts of the documentation that answers: '{topic}'",
+  expected_output="A summary of the solution and the URL link to the relevant documentation that answers: '{topic}'",
   agent=researcher,
   async_execution=False,
 )

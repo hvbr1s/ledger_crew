@@ -60,8 +60,8 @@ app = FastAPI()
 
 # Ready the crew
 crew = Crew(
-  agents=[researcher, sales_assistant],
-  tasks=[research_issue, assist_customer],
+  agents=[researcher],
+  tasks=[research_issue],
   process=Process.sequential,
   verbose= 1,
 )
@@ -167,14 +167,15 @@ async def ragchat(user_id, chat_history):
         print(f'API Query-> {function_call_query}')
 
         ##### OpenAI #####
-        retrieved_context = await simple_retrieve(function_call_query)
+        # retrieved_context = await simple_retrieve(function_call_query)
+        retrieved_context =  res = await agent(function_call_query)
         troubleshoot_instructions = "CONTEXT: " + "\n" + timestamp + " ." + retrieved_context + "\n\n" + "----" + "\n\n" + "ISSUE: " + "\n" + function_call_query
 
         try:
-                #res = await openai_client.chat.completions.create(
-                res = groq_client.chat.completions.create( #with Llama3
+                res = await openai_client.chat.completions.create( #with OpenAI
+                #res = groq_client.chat.completions.create( #with Llama3
                     temperature=0.0,
-                    model=llama,
+                    model=gpt,
                     messages=[
 
                         {"role": "system", "content": SALES_ASSISTANT_PROMPT },

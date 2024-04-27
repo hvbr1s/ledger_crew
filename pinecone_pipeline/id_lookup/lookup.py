@@ -59,7 +59,7 @@ def main():
     Main function to execute the steps to lookup an article.
     """
     # Set the article title or a bit of text from the article you're looking for
-    article_excerpt = "xverse"
+    article_excerpt = "sparrow ordinals"
     # Get the embedding for the article link
     xq = get_embedding(article_excerpt)
     # Query Pinecone to get the article ID and title using the embedding
