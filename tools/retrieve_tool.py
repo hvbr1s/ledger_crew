@@ -25,13 +25,13 @@ openai_client = OpenAI(api_key=openai_key)
 async_client = AsyncOpenAI(api_key=openai_key)
 
 @tool("Knowledge Base")
-def retriever_tool(new_query:str) -> str:
+def retriever_tool(query:str) -> str:
     """
     Use this tool to consult your knowledge base when asked a technical question. 
     Always query the tool according to this format: new_query:{topic}. 
     """
     #Logging
-    print(f"...Document retrieval in progress for: {new_query}...")
+    print(f"...Document retrieval in progress for: {query}...")
     # Define context box
     contexts = []
     # Set clock
@@ -39,7 +39,7 @@ def retriever_tool(new_query:str) -> str:
     # Set locale
     locale = "eng"
     #Deconstruct user input
-    user_query = new_query
+    user_query = query
 
     # Define a dictionary to map locales to URL segments
     locale_url_map = {
@@ -115,7 +115,7 @@ def retriever_tool(new_query:str) -> str:
                 model = reranker_main,
                 query = user_query,
                 documents = docs,
-                top_n = 2,
+                top_n = 3,
                 return_documents=True
             )
 
@@ -125,7 +125,7 @@ def retriever_tool(new_query:str) -> str:
                 model = reranker_backup,
                 query = user_query,
                 documents = docs,
-                top_n = 2,
+                top_n = 3,
                 return_documents=True
             )
 
@@ -193,7 +193,7 @@ async def simple_retrieve(user_input):
             try:
                 # Pull chunks from the serverless Pinecone instance
                 pinecone_response = await client.post(
-                    "https://serverless-test-e865e64.svc.apw5-4e34-81fa.pinecone.io/query",
+                    "https://main-e865e64.svc.aped-4627-b74a.pinecone.io/query",
                     json={
 
                         "vector": xq, 
@@ -221,7 +221,7 @@ async def simple_retrieve(user_input):
                 print('Serverless response failed, falling back to legacy Pinecone')
                 try:
                     pinecone_response = await client.post(
-                        "https://prod-e865e64.svc.northamerica-northeast1-gcp.pinecone.io/query",
+                        "https://backup-e865e64.svc.eu-west4-gcp.pinecone.io/query",
                         json={
 
                             "vector": xq, 
@@ -345,5 +345,3 @@ async def simple_retrieve(user_input):
 #     test = await retriever_tool("is Ledger recover safe?")
 #     print(test)
 # asyncio.run(main())
-
-
