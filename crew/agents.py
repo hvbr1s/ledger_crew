@@ -1,8 +1,11 @@
+import os
 from crewai import Agent
 from tools.retrieve_tool import retriever_tool
 from langchain_openai import ChatOpenAI
+from langchain_groq import ChatGroq
 from langchain.agents import load_tools
 from utility.callback import print_agent_output
+from dotenv import main
 
 human_tools = load_tools(["human"])
 
@@ -16,6 +19,12 @@ creative_llm = ChatOpenAI(
     temperature=0.2
 )
 
+# Initialize Llama LLM through Groq instead
+# main.load_dotenv()
+# llm =  ChatGroq(
+#             api_key=os.environ['GROQ_API_KEY'],
+#             model="llama3-70b-8192"
+#         )
 
 # Creating a senior researcher agent with memory and verbose mode
 researcher = Agent(
