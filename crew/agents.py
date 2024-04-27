@@ -20,16 +20,16 @@ creative_llm = ChatOpenAI(
 )
 
 # Initialize Llama LLM through Groq instead
-# main.load_dotenv()
-# llm =  ChatGroq(
-#             api_key=os.environ['GROQ_API_KEY'],
-#             model="llama3-70b-8192"
-#         )
+main.load_dotenv()
+groq =  ChatGroq(
+            api_key=os.environ['GROQ_API_KEY'],
+            model="llama3-70b-8192"
+        )
 
 # Creating a senior researcher agent with memory and verbose mode
 researcher = Agent(
   role='Senior Researcher',
-  goal='ALWAYS use your Knowledge Base tool to find technical documentation that can help with technical issues related to Ledger products.',
+  goal='ALWAYS use your Knowledge Base tools to find solutions to technical questions about Ledger products.',
   verbose=True,
   memory=True,
   backstory=(
@@ -40,7 +40,7 @@ researcher = Agent(
   ),
   tools=[retriever_tool],
   allow_delegation=False,
-  llm=focused_llm,
+  llm=groq,
   step_callback=lambda x: print_agent_output(x,"Senior Researcher"),
 )
 
